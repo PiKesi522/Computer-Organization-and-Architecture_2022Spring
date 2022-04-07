@@ -29,8 +29,18 @@ public:
         Registers[0] = bitset<64>(0);
         // 0号寄存器一直为全零
 
+        Registers[10] = bitset<64>("1");
+        // x10 = 1
+        Registers[11] = bitset<64>("11");
+        // x11 = 3
+        Registers[13] = bitset<64>("110000");
+        // x13 = &A[0] = 0x00000030
+        Registers[14] = bitset<64>("10000");
+        // x14 = &B[0] = 0x00000010
         Registers[28] = bitset<64>("11110");
-        Registers[29] = bitset<64>("00011");
+        // x28 = i = 30
+        Registers[29] = bitset<64>("1");
+        // x29 = j = 1
     }
 
     void ReadWrite(bitset<5> RdReg1, bitset<5> RdReg2, bitset<5> WrtReg, bitset<64> WrtData, bitset<1> WrtEnable)
@@ -100,41 +110,48 @@ public:
         case ADDU:
             // 000 add
             ALUresult = bitset<64>(oprand1.to_ullong() + oprand2.to_ullong());
-            cout << "ADDU result: " << ALUresult << endl;
+            cout << "ADDU result: " << endl;
+            cout << ALUresult << endl;
             break;
         case SUBU:
             // 001 sub
             ALUresult = bitset<64>(oprand1.to_ullong() - oprand2.to_ullong());
-            cout << "SUBU result: " << ALUresult << endl;
+            cout << "SUBU result: " << endl;
+            cout << ALUresult << endl;
             break;
         case AND:
             // 010 and
             ALUresult = bitset<64>(oprand1.to_ullong() & oprand2.to_ullong());
-            cout << "AND result: " << ALUresult << endl;
+            cout << "AND result: " << endl;
+            cout << ALUresult << endl;
             break;
         case OR:
             // 011 or
             ALUresult = bitset<64>(oprand1.to_ullong() | oprand2.to_ullong());
-            cout << "OR result: " << ALUresult << endl;
+            cout << "OR result: " << endl;
+            cout << ALUresult << endl;
             break;
         case XOR:
             // 100 xor
             ALUresult = bitset<64>(oprand1.to_ullong() ^ oprand2.to_ullong());
-            cout << "XOR result: " << ALUresult << endl;
+            cout << "XOR result: " << endl;
+            cout << ALUresult << endl;
             break;
         case 5:
             // 101 sw/lw, 这里开始拿到的都是 寄存器的起始地址oprand1 和 立即数的地址偏移oprand2 做计算得到的 目的地址
             ALUresult = bitset<64>(oprand1.to_ullong() + oprand2.to_ullong());
-            cout << "sw/lw address: " << ALUresult << endl;
+            cout << "sw/lw address: " << endl;
+            cout << ALUresult << endl;
             break;
         case 6:
             // 110 jal Jype没有reg1，所以oprand1是空的，oprand2是PC的地址，我们需要再加4
             ALUresult = bitset<64>(oprand2.to_ullong() + 4);
-            cout << "store (PC + 4): " << ALUresult << endl;
+            cout << "store (PC + 4): " << endl;
+            cout << ALUresult << endl;
             break;
         case 7:
             // 111 不知道做啥
-            cout << "Do nothing" << endl;
+            cout << "Branch/Jump" << endl;
             break;
         default:
             cout << "ERROR" << endl;
@@ -206,8 +223,21 @@ public:
                 DMem[i] = bitset<8>(line.substr(0, 8));
                 i++;
             }
-            DMem[222] = bitset<8>("1");
-            DMem[223] = bitset<8>("00110111");
+            DMem[16 + 0 * 8 + 7] = bitset<8>("11111111");
+            // DMem[16] = B[0] = 6
+            DMem[16 + 1 * 8 + 6] = bitset<8>("1");
+            DMem[16 + 1 * 8 + 7] = bitset<8>("00110111");
+            // B[1] = 0x00 00 00 00 00 00 01 37
+
+            DMem[48 + 0 * 8 + 7] = bitset<8>("0");
+            // DMem[48] = A[0]
+            DMem[48 + 27 * 8 + 6] = bitset<8>("1");
+            DMem[48 + 27 * 8 + 7] = bitset<8>("00110111");
+            // A[27] = 0x00 00 00 00 00 00 01 37
+            DMem[48 + 28 * 8 + 7] = bitset<8>("11100");
+            // A[28] = 28
+            DMem[48 + 29 * 8 + 7] = bitset<8>("11101");
+            // A[29] = 29
         }
         else
             cout << "Unable to open file";
@@ -432,29 +462,42 @@ int main()
         // Update PC
         if (isBranch[0] && myRF.ReadData1 == myRF.ReadData2)
         {
+            cout << "Success Branch" << endl;
             // 如果相同，跳转PC += 指定大小; 不同则进行下一个指令，PC += 4，处理的branch指令都是 beq
             bitset<32> addressExtend;
             // imm[12|10:5] rs2 rs1 000 imm[4:1|11]
-            if (instruction[0] == true)
-                addressExtend = bitset<32>(string(19, '1') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(24, 1) + instruction.to_string().substr(2, 6) + instruction.to_string().substr(20, 4) + string("0"));
+            if (instruction[31] == true)
+                addressExtend = bitset<32>(string(19, '1') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(24, 1) + instruction.to_string().substr(1, 6) + instruction.to_string().substr(20, 4) + string("0"));
             else
-                addressExtend = bitset<32>(string(19, '0') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(24, 1) + instruction.to_string().substr(2, 6) + instruction.to_string().substr(20, 4) + string("0"));
+                addressExtend = bitset<32>(string(19, '0') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(24, 1) + instruction.to_string().substr(1, 6) + instruction.to_string().substr(20, 4) + string("0"));
             // 最后加一位0是为了偶跳转
+            cout << "addressExtend:" << endl;
+            cout << addressExtend << endl;
             PC = bitset<32>(PC.to_ulong() + addressExtend.to_ulong());
+            cout << "PC point to " << PC.to_ulong() << endl;
         }
         else if (isJType[0])
         {
+            cout << "Success Jump" << endl;
             bitset<32> addressExtend;
             // imm[20|10:1|11|19:12]
-            if (instruction[0] == true)
+            if (instruction[31] == true)
+            {
                 addressExtend = bitset<32>(string(11, '1') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(12, 8) + instruction.to_string().substr(11, 1) + instruction.to_string().substr(1, 10) + string("0"));
+            }
             else
+            {
                 addressExtend = bitset<32>(string(11, '0') + instruction.to_string().substr(0, 1) + instruction.to_string().substr(12, 8) + instruction.to_string().substr(11, 1) + instruction.to_string().substr(1, 10) + string("0"));
+            }
+            cout << "addressExtend:" << endl;
+            cout << addressExtend << endl;
             PC = bitset<32>(PC.to_ulong() + addressExtend.to_ulong());
+            cout << "PC point to " << PC.to_ulong() << endl;
         }
         else
         {
             PC = bitset<32>(PC.to_ulong() + 4);
+            cout << "PC point to " << PC.to_ulong() << endl;
         }
 
         myRF.OutputRF(); // dump RF;
