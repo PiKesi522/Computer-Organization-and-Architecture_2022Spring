@@ -31,8 +31,6 @@ public:
 
         Registers[10] = bitset<64>("1");
         // x10 = 1
-        Registers[11] = bitset<64>("11");
-        // x11 = 3
         Registers[13] = bitset<64>("110000");
         // x13 = &A[0] = 0x00000030
         Registers[14] = bitset<64>("10000");
