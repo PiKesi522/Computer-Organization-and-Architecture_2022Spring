@@ -400,7 +400,7 @@ int main()
             (isIType[0] || isRType[0] || isJType[0] || isLoad[0]) ? bitset<5>(instruction.to_string().substr(20, 5)) : bitset<5>(string("00000")),
             // 找到wrtReg
             bitset<64>(0),
-            // wrtData 为 全0
+            // wrtData 为 全0ycj
             wrtEnable);
         // 这步进行之后，获得了两个源寄存器的内部数据。
         // 如果之后需要写的话，目的寄存器全部置零备用；否则保持原先的状态
