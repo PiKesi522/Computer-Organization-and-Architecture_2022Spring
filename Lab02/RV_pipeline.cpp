@@ -5,7 +5,7 @@
 #include<fstream>
 using namespace std;
 #define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
-
+// 驎齤傻逼
 const unsigned long ADD = 0;
 const unsigned long SUB = 1;
 const unsigned long AND = 2;
