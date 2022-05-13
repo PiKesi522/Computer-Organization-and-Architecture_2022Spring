@@ -169,7 +169,8 @@ struct EXStruct
     bool wrt_enable = false; // 是否写寄存器
     bool nop;
 
-    void clear(){
+    void clear()
+    {
         this->Read_data1 = bitset<64>(0);
         bitset<64> Read_data2;
         bitset<64> Imm;
@@ -491,7 +492,7 @@ public:
             ALUresult = bitset<64>(operand1.to_ullong() + operand2.to_ullong());
             break;
         case SUB:
-            ALUresult = bitset<64>(operand1.to_ullong() - operand2.to_ullong());
+            ALUresult = bitset<64>(operand1.to_ulong() - operand2.to_ulong());
             break;
         case AND:
             ALUresult = bitset<64>(operand1 & operand2);
@@ -724,7 +725,7 @@ int main()
             {
                 // sd
                 myDataMem.writeDataMem(getAddress(state.MEM.ALUresult), state.MEM.Store_data);
-                cout << "Already sd" << endl;
+                cout << "Already sd to" << getAddress(state.MEM.ALUresult) << "|||" << state.MEM.Store_data << endl;
             }
             pipelineRegister.MEM_WB_Register.wrt_enable = state.MEM.wrt_enable;
             pipelineRegister.MEM_WB_Register.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
@@ -754,6 +755,7 @@ int main()
 
             pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
             pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
+            cout << state.EX.wrt_mem << endl;
 
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
@@ -780,12 +782,13 @@ int main()
             {
                 cout << "has hazard B" << endl;
                 operandB = forwardingUnit.getOperandB(pipelineRegister);
+                cout << operandB << endl;
             }
             else
             {
                 if (state.EX.is_I_type || state.EX.wrt_mem)
                 {
-                    // I-type 或 S-type
+                    // I-type 或 sd
                     operandB = state.EX.Imm;
                 }
                 else
@@ -794,9 +797,9 @@ int main()
                     operandB = state.EX.Read_data2;
                 }
             }
-            
-            pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
 
+            pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
+            // cout << operandA << "||||" << operandB << endl;
             if (state.EX.rd_mem)
             {
                 cout << "ld" << endl;
@@ -822,7 +825,6 @@ int main()
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
             }
-
 
             // TODO 将流水线寄存器的值存储到MEM中
             // state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
@@ -902,8 +904,10 @@ int main()
             {
                 // S-type
                 // sd
-                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 20, 24);
+                // RS1 用于计算地址偏移
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
+                // RS2 用于得到源地址
+                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
                 bitset<5> imm1 = getBits<5>(state.ID.Instr, 7, 11);
                 bitset<7> imm2 = getBits<7>(state.ID.Instr, 25, 31);
                 bitset<12> imm;
@@ -916,6 +920,7 @@ int main()
                     imm[i + 5] = imm2[i];
                 }
                 pipelineRegister.ID_EX_Register.Imm = generateImm<12>(imm);
+                cout << "Imm:" << pipelineRegister.ID_EX_Register.Imm << endl;
                 pipelineRegister.ID_EX_Register.wrt_enable = false;
                 pipelineRegister.ID_EX_Register.wrt_mem = true;
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
@@ -1030,6 +1035,6 @@ int main()
 
     myRF.outputRF();           // dump RF;
     myDataMem.outputDataMem(); // dump data mem
-    
+
     return 0;
 }
