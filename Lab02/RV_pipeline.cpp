@@ -481,10 +481,10 @@ int main()
 
     while (1) {
         /* -------------------- 设置此轮周期哪些部件可以操作 -------------------- */
-        state.WB.nop = state.MEM.nop && cycle >= 4;
-        state.MEM.nop = state.EX.nop && cycle >= 3;
-        state.EX.nop = state.ID.nop && cycle >= 2;
-        state.ID.nop = state.IF.nop && cycle >= 1;
+        state.WB.nop = state.MEM.nop && cycle < 4;
+        state.MEM.nop = state.EX.nop && cycle < 3;
+        state.EX.nop = state.ID.nop && cycle < 2;
+        state.ID.nop = state.IF.nop && cycle < 1;
         state.IF.nop = (haltCycle != -1);
 
         // cout << cycle << endl;
