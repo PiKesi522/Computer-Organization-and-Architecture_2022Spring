@@ -368,6 +368,8 @@ void printState(stateStruct state, int cycle)
         printstate << "WB.Wrt_reg_addr:\t" << state.WB.Wrt_reg_addr << endl;
         printstate << "WB.wrt_enable:\t" << state.WB.wrt_enable << endl;
         printstate << "WB.nop:\t" << state.WB.nop << endl;
+
+        printstate << "===============================================" << endl;
     }
     else
         cout << "Unable to open file";
@@ -578,7 +580,12 @@ int main()
         cout << cycle << endl;
         /* --------------------- WB stage --------------------- */
         if (!state.WB.nop)
-        {
+        {            
+            
+            state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
+            state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
+            state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
+
             // 写回目的寄存器
             if (state.WB.wrt_enable)
             {
@@ -589,8 +596,16 @@ int main()
         /* --------------------- MEM stage --------------------- */
         if (!state.MEM.nop)
         {
+            state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
+            state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
+            state.MEM.rd_mem = pipelineRegister.EX_MEM_Register.rd_mem;
+            state.MEM.wrt_mem = pipelineRegister.EX_MEM_Register.wrt_mem;
+            state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
+            state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
+
+
             pipelineRegister.MEM_WB_Register.clear();
-            
+
             pipelineRegister.MEM_WB_Register.Wrt_data = state.MEM.ALUresult;
             if (state.MEM.rd_mem)
             {
@@ -606,14 +621,28 @@ int main()
             pipelineRegister.MEM_WB_Register.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
 
             // TODO 将流水线寄存器的值存储到WB中
-            state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
-            state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
-            state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
+            // state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
+            // state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
+            // state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
         }
 
         /* --------------------- EX stage --------------------- */
         if (!state.EX.nop)
         {
+            
+            state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
+            state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
+            state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
+            state.EX.Read_data1 = pipelineRegister.ID_EX_Register.Read_data1;
+            state.EX.Read_data2 = pipelineRegister.ID_EX_Register.Read_data2;
+            state.EX.Imm = pipelineRegister.ID_EX_Register.Imm;
+            state.EX.wrt_enable = pipelineRegister.ID_EX_Register.wrt_enable;
+            state.EX.alu_op = pipelineRegister.ID_EX_Register.ALUop;
+            state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
+            state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
+            state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
+
+
             pipelineRegister.EX_MEM_Register.clear();
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
@@ -681,12 +710,12 @@ int main()
             pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
 
             // TODO 将流水线寄存器的值存储到MEM中
-            state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
-            state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
-            state.MEM.rd_mem = pipelineRegister.EX_MEM_Register.rd_mem;
-            state.MEM.wrt_mem = pipelineRegister.EX_MEM_Register.wrt_mem;
-            state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
-            state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
+            // state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
+            // state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
+            // state.MEM.rd_mem = pipelineRegister.EX_MEM_Register.rd_mem;
+            // state.MEM.wrt_mem = pipelineRegister.EX_MEM_Register.wrt_mem;
+            // state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
+            // state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
         }
 
         /* --------------------- ID stage --------------------- */
@@ -842,17 +871,17 @@ int main()
             }
 
             // TODO 将流水线寄存器的值存储到EX中
-            state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
-            state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
-            state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
-            state.EX.Read_data1 = pipelineRegister.ID_EX_Register.Read_data1;
-            state.EX.Read_data2 = pipelineRegister.ID_EX_Register.Read_data2;
-            state.EX.Imm = pipelineRegister.ID_EX_Register.Imm;
-            state.EX.wrt_enable = pipelineRegister.ID_EX_Register.wrt_enable;
-            state.EX.alu_op = pipelineRegister.ID_EX_Register.ALUop;
-            state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
-            state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
-            state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
+            // state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
+            // state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
+            // state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
+            // state.EX.Read_data1 = pipelineRegister.ID_EX_Register.Read_data1;
+            // state.EX.Read_data2 = pipelineRegister.ID_EX_Register.Read_data2;
+            // state.EX.Imm = pipelineRegister.ID_EX_Register.Imm;
+            // state.EX.wrt_enable = pipelineRegister.ID_EX_Register.wrt_enable;
+            // state.EX.alu_op = pipelineRegister.ID_EX_Register.ALUop;
+            // state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
+            // state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
+            // state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
         }
 
         /* --------------------- IF stage --------------------- */
