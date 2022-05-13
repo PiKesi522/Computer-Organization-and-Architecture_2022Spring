@@ -42,11 +42,11 @@ struct ID_EX
     bitset<64> Read_data1;
     bitset<64> Read_data2;
     bitset<64> Imm;
-    bitset<32> PC;
     bitset<5> Rs1;
     bitset<5> Rs2;
     bitset<5> Rd;
     unsigned long ALUop; // 1 for addu, lw, sw, 0 for subu
+
     bool is_I_type;
     bool is_J_type = false;
     bool is_R_type;
@@ -54,6 +54,22 @@ struct ID_EX
     bool rd_mem;
     bool wrt_mem;
     bool wrt_enable;
+
+    void clear(){
+        this->Read_data1 = bitset<64>(0);
+        this->Read_data2 = bitset<64>(0);
+        this->Imm = bitset<64>(0);
+        this->Rs1 = bitset<5>(0);
+        this->Rs2 = bitset<5>(0);
+        this->Rd = bitset<5>(0);
+        this->is_I_type = false;
+        this->is_J_type = false;
+        this->is_R_type = false;
+        this->is_Branch = false;
+        this->wrt_enable = false;
+        this->wrt_mem = false;
+        this->rd_mem = false;
+    }
 };
 
 struct EXStruct
@@ -76,7 +92,6 @@ struct EX_MEM
 {
     bitset<64> ALUresult;
     bitset<64> Store_data;
-    bitset<32> new_Addr; // 通过PC + 4 + offset得到的新的地址
     bitset<5> Rs1;
     bitset<5> Rs2;
     bitset<5> Rd;
@@ -84,6 +99,18 @@ struct EX_MEM
     bool rd_mem = false;
     bool wrt_mem = false;
     bool wrt_enable = false;
+
+    void clear(){
+        this->ALUresult = bitset<64>(0);
+        this->Store_data = bitset<64>(0);
+        this->Rs1 = bitset<5>(0);
+        this->Rs2 = bitset<5>(0);
+        this->Rd = bitset<5>(0);
+        this->doBranch = false; // 比较结果不同（bne），需要跳转
+        this->rd_mem = false;
+        this->wrt_mem = false;
+        this->wrt_enable = false;
+    }
 };
 
 struct MEMStruct
@@ -106,6 +133,14 @@ struct MEM_WB
     bitset<5> Rt;
     bitset<5> Wrt_reg_addr;
     bool wrt_enable;
+
+    void clear(){
+        this->Wrt_data = bitset<64>(0);
+        this->Rs = bitset<5>(0);
+        this->Rt = bitset<5>(0);
+        this->Wrt_reg_addr = bitset<5>(0);
+        this->wrt_enable = false;
+    }
 };
 
 struct WBStruct
@@ -521,10 +556,7 @@ int main()
     ALU alu;
     ForwardingUnit forwardingUnit;
     HazardUnit hazardUnit;
-    struct stateStruct state
-    {
-        0
-    };
+    struct stateStruct state{0};
     state.IF.nop = false;
     state.ID.nop = true;
     state.EX.nop = true;
@@ -543,7 +575,7 @@ int main()
         state.ID.nop = state.IF.nop || cycle < 1;
         state.IF.nop = halt;
 
-        // cout << cycle << endl;
+        cout << cycle << endl;
         /* --------------------- WB stage --------------------- */
         if (!state.WB.nop)
         {
@@ -557,6 +589,8 @@ int main()
         /* --------------------- MEM stage --------------------- */
         if (!state.MEM.nop)
         {
+            pipelineRegister.MEM_WB_Register.clear();
+            
             pipelineRegister.MEM_WB_Register.Wrt_data = state.MEM.ALUresult;
             if (state.MEM.rd_mem)
             {
@@ -580,6 +614,7 @@ int main()
         /* --------------------- EX stage --------------------- */
         if (!state.EX.nop)
         {
+            pipelineRegister.EX_MEM_Register.clear();
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
             if (forwardingUnit.hasHazardForA())
@@ -621,6 +656,7 @@ int main()
 
             if (state.EX.rd_mem)
             {
+                cout << "ld" << endl;
                 // ld
                 pipelineRegister.EX_MEM_Register.rd_mem = true;
                 if (hazardUnit.hazardDetect(pipelineRegister))
@@ -631,6 +667,7 @@ int main()
             }
             if (state.EX.wrt_mem)
             {
+                cout << "sd" << endl;
                 // sd
                 pipelineRegister.EX_MEM_Register.wrt_mem = true;
                 pipelineRegister.EX_MEM_Register.Store_data = state.EX.Read_data2;
@@ -655,21 +692,23 @@ int main()
         /* --------------------- ID stage --------------------- */
         if (!state.ID.nop)
         {
-            bitset<32> instr = pipelineRegister.IF_ID_Register.Instr;
+            pipelineRegister.ID_EX_Register.clear();
+
+            state.ID.Instr = pipelineRegister.IF_ID_Register.Instr;
             // 根据指令判断指令类型以及ALUOP
-            bitset<7> opcode = getBits<7>(instr, 0, 6);
+            bitset<7> opcode = getBits<7>(state.ID.Instr, 0, 6);
             bitset<3> funct3;
             bitset<7> funct7;
 
             if (opcode == bitset<7>("0110011"))
             {
                 // R-type
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(instr, 20, 24);
-                pipelineRegister.ID_EX_Register.Rd = getBits<5>(instr, 7, 11);
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
+                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
+                pipelineRegister.ID_EX_Register.Rd = getBits<5>(state.ID.Instr, 7, 11);
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
-                funct3 = getBits<3>(instr, 12, 14);
-                funct7 = getBits<7>(instr, 25, 31);
+                funct3 = getBits<3>(state.ID.Instr, 12, 14);
+                funct7 = getBits<7>(state.ID.Instr, 25, 31);
                 if (funct3 == bitset<3>("000"))
                 {
                     if (funct7 == bitset<7>("0000000"))
@@ -703,11 +742,11 @@ int main()
             {
                 // I-type
                 pipelineRegister.ID_EX_Register.is_I_type = true;
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rd = getBits<5>(instr, 7, 11);
-                pipelineRegister.ID_EX_Register.Imm = generateImm<12>(getBits<12>(instr, 20, 31));
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
+                pipelineRegister.ID_EX_Register.Rd = getBits<5>(state.ID.Instr, 7, 11);
+                pipelineRegister.ID_EX_Register.Imm = generateImm<12>(getBits<12>(state.ID.Instr, 20, 31));
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
-                funct3 = getBits<3>(instr, 12, 14);
+                funct3 = getBits<3>(state.ID.Instr, 12, 14);
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
                 if (funct3 == bitset<3>("011"))
                 {
@@ -719,10 +758,10 @@ int main()
             {
                 // S-type
                 // sd
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(instr, 20, 24);
-                bitset<5> imm1 = getBits<5>(instr, 7, 11);
-                bitset<7> imm2 = getBits<7>(instr, 25, 31);
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
+                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
+                bitset<5> imm1 = getBits<5>(state.ID.Instr, 7, 11);
+                bitset<7> imm2 = getBits<7>(state.ID.Instr, 25, 31);
                 bitset<12> imm;
                 for (int i = 0; i <= 4; ++i)
                 {
@@ -741,10 +780,10 @@ int main()
                 // SB-type
                 // beq
 
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(instr, 20, 24);
-                bitset<4> imm1 = getBits<4>(instr, 8, 11);
-                bitset<6> imm2 = getBits<6>(instr, 25, 30);
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
+                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
+                bitset<4> imm1 = getBits<4>(state.ID.Instr, 8, 11);
+                bitset<6> imm2 = getBits<6>(state.ID.Instr, 25, 30);
                 bitset<13> imm;
                 imm[0] = false; // SB-type最低位一定是0，保证是偶数
                 for (int i = 1; i <= 4; ++i)
@@ -755,8 +794,8 @@ int main()
                 {
                     imm[i] = imm2[i - 5];
                 }
-                imm[11] = instr[7];
-                imm[12] = instr[31];
+                imm[11] = state.ID.Instr[7];
+                imm[12] = state.ID.Instr[31];
                 pipelineRegister.ID_EX_Register.Imm = generateImm<13>(imm);
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
                 // TODO 在ID阶段就做分支跳转的判断
@@ -767,21 +806,21 @@ int main()
                 // UJ-type
                 // jal
                 // TODO 在ID阶段就做分支跳转的判断
-                pipelineRegister.ID_EX_Register.Rd = getBits<5>(instr, 7, 11);
-                bitset<10> imm1 = getBits<10>(instr, 21, 30);
-                bitset<8> imm2 = getBits<8>(instr, 12, 19);
+                pipelineRegister.ID_EX_Register.Rd = getBits<5>(state.ID.Instr, 7, 11);
+                bitset<10> imm1 = getBits<10>(state.ID.Instr, 21, 30);
+                bitset<8> imm2 = getBits<8>(state.ID.Instr, 12, 19);
                 bitset<21> imm;
                 imm[0] = false; // UJ-type最低位一定是0，保证是偶数
                 for (int i = 1; i <= 10; ++i)
                 {
                     imm[i] = imm1[i - 1];
                 }
-                imm[11] = instr[20];
+                imm[11] = state.ID.Instr[20];
                 for (int i = 12; i <= 19; ++i)
                 {
                     imm[i] = imm2[i - 12];
                 }
-                imm[20] = instr[31];
+                imm[20] = state.ID.Instr[31];
                 pipelineRegister.ID_EX_Register.Imm = generateImm<21>(imm);
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 pipelineRegister.ID_EX_Register.is_J_type = true;
@@ -794,12 +833,12 @@ int main()
             // TODO 判断两个分支指令是否发生跳转
             if (pipelineRegister.ID_EX_Register.is_Branch && pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2)
             {
-                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + state.EX.Imm.to_ulong());
+                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + pipelineRegister.ID_EX_Register.Imm.to_ulong());
             }
 
             if (pipelineRegister.ID_EX_Register.is_J_type)
             {
-                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + state.EX.Imm.to_ulong());
+                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + pipelineRegister.ID_EX_Register.Imm.to_ulong());
             }
 
             // TODO 将流水线寄存器的值存储到EX中
