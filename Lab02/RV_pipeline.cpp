@@ -420,6 +420,16 @@ public:
     }
 };
 
+
+/*
+ * HazardUnit: Ld,Sd冒险控制单元
+ */
+class HazardUnit{
+    bool hazardDetect(PipelineRegister pipelineRegister){
+        return pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1 || pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2;
+    }
+};
+
 /*
  * Utils
  */
@@ -459,15 +469,14 @@ bitset<32> getAddress(const bitset<64> &imm) {
     return addr;
 }
 
-int main()
-{
-
+int main(){
     RF myRF;
     INSMem myInsMem;
     DataMem myDataMem;
     PipelineRegister pipelineRegister;
     ALU alu;
     ForwardingUnit forwardingUnit;
+    HazardUnit hazardUnit;
     struct stateStruct state{0};
     state.IF.nop = false;
     state.ID.nop = true;
@@ -556,8 +565,7 @@ int main()
             if (state.EX.rd_mem) {
                 // ld
                 pipelineRegister.EX_MEM_Register.rd_mem = true;
-                if(pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1 || 
-                   pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2){
+                if(hazardUnit.hazardDetect(pipelineRegister)){
                     state.ID.nop = true;
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
@@ -566,8 +574,7 @@ int main()
                 // sd
                 pipelineRegister.EX_MEM_Register.wrt_mem = true;
                 pipelineRegister.EX_MEM_Register.Store_data = state.EX.Read_data2;
-                if(pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1 || 
-                   pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2){
+                if(hazardUnit.hazardDetect(pipelineRegister)){
                     state.ID.nop = true;
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
@@ -745,6 +752,7 @@ int main()
             // TODO 更新PC
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
+
 
 
 
