@@ -3,6 +3,87 @@
 #include <iostream>
 #include <string>
 #include <vector>
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+// 驎畿你就是歌姬吧
+
 using namespace std;
 #define MemSize 1000 // memory size, in reality, the memory size should be 2^32, but for this lab, for the space resaon, we keep it as this large number, but the memory is still 32-bit addressable.
 
@@ -55,7 +136,8 @@ struct ID_EX
     bool wrt_mem;
     bool wrt_enable;
 
-    void clear(){
+    void clear()
+    {
         this->Read_data1 = bitset<64>(0);
         this->Read_data2 = bitset<64>(0);
         this->Imm = bitset<64>(0);
@@ -100,7 +182,8 @@ struct EX_MEM
     bool wrt_mem = false;
     bool wrt_enable = false;
 
-    void clear(){
+    void clear()
+    {
         this->ALUresult = bitset<64>(0);
         this->Store_data = bitset<64>(0);
         this->Rs1 = bitset<5>(0);
@@ -134,7 +217,8 @@ struct MEM_WB
     bitset<5> Wrt_reg_addr;
     bool wrt_enable;
 
-    void clear(){
+    void clear()
+    {
         this->Wrt_data = bitset<64>(0);
         this->Rs = bitset<5>(0);
         this->Rt = bitset<5>(0);
@@ -558,7 +642,10 @@ int main()
     ALU alu;
     ForwardingUnit forwardingUnit;
     HazardUnit hazardUnit;
-    struct stateStruct state{0};
+    struct stateStruct state
+    {
+        0
+    };
     state.IF.nop = false;
     state.ID.nop = true;
     state.EX.nop = true;
@@ -580,8 +667,8 @@ int main()
         cout << cycle << endl;
         /* --------------------- WB stage --------------------- */
         if (!state.WB.nop)
-        {            
-            
+        {
+
             state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
             state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
             state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
@@ -602,7 +689,6 @@ int main()
             state.MEM.wrt_mem = pipelineRegister.EX_MEM_Register.wrt_mem;
             state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
             state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
-
 
             pipelineRegister.MEM_WB_Register.clear();
 
@@ -629,7 +715,7 @@ int main()
         /* --------------------- EX stage --------------------- */
         if (!state.EX.nop)
         {
-            
+
             state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
             state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
             state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
@@ -641,7 +727,6 @@ int main()
             state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
             state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
-
 
             pipelineRegister.EX_MEM_Register.clear();
             bitset<64> operandA, operandB;
@@ -913,6 +998,6 @@ int main()
 
     myRF.outputRF();           // dump RF;
     myDataMem.outputDataMem(); // dump data mem
-
+    
     return 0;
 }
