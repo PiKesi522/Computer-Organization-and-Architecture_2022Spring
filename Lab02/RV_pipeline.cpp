@@ -168,6 +168,21 @@ struct EXStruct
     unsigned long alu_op;    // 1 for addu, lw, sw, 0 for subu
     bool wrt_enable = false; // 是否写寄存器
     bool nop;
+
+    void clear(){
+        this->Read_data1 = bitset<64>(0);
+        bitset<64> Read_data2;
+        bitset<64> Imm;
+        bitset<5> Rs;
+        bitset<5> Rt;
+        bitset<5> Wrt_reg_addr;
+        bool is_I_type = false;
+        bool rd_mem = false;     // 是否读内存
+        bool wrt_mem = false;    // 是否写内存
+        unsigned long alu_op;    // 1 for addu, lw, sw, 0 for subu
+        bool wrt_enable = false; // 是否写寄存器
+        bool nop;
+    }
 };
 
 struct EX_MEM
@@ -487,6 +502,9 @@ public:
         case XOR:
             ALUresult = bitset<64>(operand1 ^ operand2);
             break;
+        default:
+            ALUresult = bitset<64>(0);
+            break;
         }
 
         return ALUresult;
@@ -715,7 +733,6 @@ int main()
         /* --------------------- EX stage --------------------- */
         if (!state.EX.nop)
         {
-
             state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
             state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
             state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
@@ -729,6 +746,8 @@ int main()
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
 
             pipelineRegister.EX_MEM_Register.clear();
+            pipelineRegister.EX_MEM_Register.ALUresult = bitset<64>(0);
+
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
             if (forwardingUnit.hasHazardForA())
@@ -766,6 +785,7 @@ int main()
                     operandB = state.EX.Read_data2;
                 }
             }
+            
             pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
 
             if (state.EX.rd_mem)
@@ -775,6 +795,7 @@ int main()
                 pipelineRegister.EX_MEM_Register.rd_mem = true;
                 if (hazardUnit.hazardDetect(pipelineRegister))
                 {
+                    cout << "ld hazard" << endl;
                     state.ID.nop = true;
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
@@ -787,6 +808,7 @@ int main()
                 pipelineRegister.EX_MEM_Register.Store_data = state.EX.Read_data2;
                 if (hazardUnit.hazardDetect(pipelineRegister))
                 {
+                    cout << "sd hazard" << endl;
                     state.ID.nop = true;
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
@@ -886,6 +908,7 @@ int main()
                     imm[i + 5] = imm2[i];
                 }
                 pipelineRegister.ID_EX_Register.Imm = generateImm<12>(imm);
+                pipelineRegister.ID_EX_Register.wrt_enable = false;
                 pipelineRegister.ID_EX_Register.wrt_mem = true;
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
             }
@@ -912,6 +935,7 @@ int main()
                 imm[12] = state.ID.Instr[31];
                 pipelineRegister.ID_EX_Register.Imm = generateImm<13>(imm);
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
+                pipelineRegister.ID_EX_Register.wrt_enable = false;
                 // TODO 在ID阶段就做分支跳转的判断
                 pipelineRegister.ID_EX_Register.is_Branch = true;
             }
@@ -986,7 +1010,7 @@ int main()
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
-        if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop)
+        if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop || cycle == 30)
             break;
 
         printState(state, cycle);
