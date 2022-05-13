@@ -724,6 +724,7 @@ int main()
             {
                 // sd
                 myDataMem.writeDataMem(getAddress(state.MEM.ALUresult), state.MEM.Store_data);
+                cout << "Already sd" << endl;
             }
             pipelineRegister.MEM_WB_Register.wrt_enable = state.MEM.wrt_enable;
             pipelineRegister.MEM_WB_Register.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
@@ -901,8 +902,8 @@ int main()
             {
                 // S-type
                 // sd
-                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
-                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
+                pipelineRegister.ID_EX_Register.Rs2 = getBits<5>(state.ID.Instr, 15, 19);
+                pipelineRegister.ID_EX_Register.Rs1 = getBits<5>(state.ID.Instr, 20, 24);
                 bitset<5> imm1 = getBits<5>(state.ID.Instr, 7, 11);
                 bitset<7> imm2 = getBits<7>(state.ID.Instr, 25, 31);
                 bitset<12> imm;
