@@ -476,16 +476,15 @@ int main()
     state.WB.nop = true;
     state.EX.alu_op = true;
     int cycle = 0;
-    int haltCycle = -1;
-
+    bool halt = false;
 
     while (1) {
         /* -------------------- 设置此轮周期哪些部件可以操作 -------------------- */
-        state.WB.nop = state.MEM.nop && cycle < 4;
-        state.MEM.nop = state.EX.nop && cycle < 3;
-        state.EX.nop = state.ID.nop && cycle < 2;
-        state.ID.nop = state.IF.nop && cycle < 1;
-        state.IF.nop = (haltCycle != -1);
+        state.WB.nop = state.MEM.nop || cycle < 4;
+        state.MEM.nop = state.EX.nop || cycle < 3;
+        state.EX.nop = state.ID.nop || cycle < 2;
+        state.ID.nop = state.IF.nop || cycle < 1;
+        state.IF.nop = halt;
 
         // cout << cycle << endl;
         /* --------------------- WB stage --------------------- */
@@ -738,9 +737,8 @@ int main()
             pipelineRegister.IF_ID_Register.Instr = myInsMem.readInstr(state.IF.PC);
             pipelineRegister.IF_ID_Register.PC = state.IF.PC;
             if (isHalt(pipelineRegister.IF_ID_Register.Instr)) {
-                haltCycle = cycle;
+                halt = true;
             }
-
             pipelineRegister.IF_ID_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
             pipelineRegister.IF_ID_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
 
