@@ -26,9 +26,8 @@ struct IFStruct {
 struct  IF_ID {
     bitset<32>  PC;
     bitset<32>  Instr;   //1 for addu, lw, sw, 0 for subu
-    bitset<5>   Rs1;  // !
-    bitset<5>   Rs2;  // !
-    bool        nop = true;
+    bitset<5>   Rs1;     // !
+    bitset<5>   Rs2;     // !
 };
 
 struct IDStruct {
@@ -52,7 +51,6 @@ struct ID_EX {
     bool        rd_mem;
     bool        wrt_mem;
     bool        wrt_enable;
-    bool        nop = true;
 };
 
 struct EXStruct {
@@ -81,7 +79,6 @@ struct EX_MEM {
     bool        rd_mem = false;
     bool        wrt_mem = false;
     bool        wrt_enable = false;
-    bool        nop = true;
 };
 
 struct MEMStruct {
@@ -102,7 +99,6 @@ struct MEM_WB {
     bitset<5>   Rt;
     bitset<5>   Wrt_reg_addr;
     bool        wrt_enable;
-    bool        nop = true;
 };
 
 struct WBStruct {
@@ -339,10 +335,10 @@ public:
     bitset<64> ALUOperation(bitset<3> ALUOP, bitset<64> operand1, bitset<64> operand2) {
         switch (ALUOP.to_ulong()) {
             case ADD:
-                ALUresult = bitset<64>(operand1.to_ulong() + operand2.to_ulong());
+                ALUresult = bitset<64>(operand1.to_ullong() + operand2.to_ullong());
                 break;
             case SUB:
-                ALUresult = bitset<64>(operand1.to_ulong() - operand2.to_ulong());
+                ALUresult = bitset<64>(operand1.to_ullong() - operand2.to_ullong());
                 break;
             case AND:
                 ALUresult = bitset<64>(operand1 & operand2);
@@ -403,12 +399,6 @@ public:
 
     bool hasHazardForB() {
         return ForwardB != bitset<2>("00");
-    }
-
-    // ! bug?
-    bool hasLoadUseHazard(PipelineRegister pipelineRegister) {
-        return pipelineRegister.ID_EX_Register.rd_mem &&
-        ((pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1) || (pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2));
     }
 
     bitset<64> getOperandA(PipelineRegister pipelineRegister) {
@@ -490,44 +480,23 @@ int main()
 
 
     while (1) {
-        /* -------------------- 处理halt -------------------- */
-        if (haltCycle != -1) {
-            if (cycle == haltCycle + 1) {
-                state.IF.nop = true;
-            } else if (cycle == haltCycle + 2) {
-                state.ID.nop = true;
-                pipelineRegister.IF_ID_Register.nop = true;
-            } else if (cycle == haltCycle + 3) {
-                state.EX.nop = true;
-                pipelineRegister.ID_EX_Register.nop = true;
-            } else if (cycle == haltCycle + 4) {
-                state.MEM.nop = true;
-                pipelineRegister.EX_MEM_Register.nop = true;
-            } else if (cycle == haltCycle + 5) {
-                state.WB.nop = true;
-                pipelineRegister.MEM_WB_Register.nop = true;
-            }
-        }
+        /* -------------------- 设置此轮周期哪些部件可以操作 -------------------- */
+        state.WB.nop = state.MEM.nop && cycle >= 4;
+        state.MEM.nop = state.EX.nop && cycle >= 3;
+        state.EX.nop = state.ID.nop && cycle >= 2;
+        state.ID.nop = state.IF.nop && cycle >= 1;
+        state.IF.nop = (haltCycle != -1);
 
-        cout << cycle << endl;
+        // cout << cycle << endl;
         /* --------------------- WB stage --------------------- */
         if (!state.WB.nop) {
             // 写回目的寄存器
             if (state.WB.wrt_enable) {
                 myRF.writeRF(state.WB.Wrt_reg_addr, state.WB.Wrt_data);
             }
-            // state.WB.nop = false;
-
-//            state.WB.nop = state.MEM.nop;
-
-//            // halt
-//            if (haltCycle != -1 && cycle == haltCycle + 5) {
-//                state.WB.nop = true;
-//                pipelineRegister.MEM_WB_Register.nop = true;
-//            }
-        } else {
         }
-        state.WB.nop = state.MEM.nop;
+
+
 
 
 
@@ -545,27 +514,15 @@ int main()
             pipelineRegister.MEM_WB_Register.wrt_enable = state.MEM.wrt_enable;
             pipelineRegister.MEM_WB_Register.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
 
-//            state.MEM.nop = state.EX.nop;
-//            pipelineRegister.MEM_WB_Register.nop = state.MEM.nop;
-        } else {
 
-        }
-        state.MEM.nop = state.EX.nop;
-        pipelineRegister.MEM_WB_Register.nop = state.MEM.nop;
-//        // halt
-//        if (haltCycle != -1 && cycle == haltCycle + 4) {
-//            state.MEM.nop = true;
-//            pipelineRegister.EX_MEM_Register.nop = true;
-//        }
-
-
-        /* --------------------- MEM/WB --------------------- */
-        // TODO 将流水线寄存器的值存储到WB中
-        if (!pipelineRegister.MEM_WB_Register.nop) {
+            // TODO 将流水线寄存器的值存储到WB中
             state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
             state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
             state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
         }
+
+
+
 
 
         /* --------------------- EX stage --------------------- */
@@ -600,31 +557,28 @@ int main()
             if (state.EX.rd_mem) {
                 // ld
                 pipelineRegister.EX_MEM_Register.rd_mem = true;
+                if(pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1 || 
+                   pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2){
+                    state.ID.nop = true;
+                    state.IF.PC = pipelineRegister.IF_ID_Register.PC;
+                }
             }
             if (state.EX.wrt_mem) {
                 // sd
                 pipelineRegister.EX_MEM_Register.wrt_mem = true;
                 pipelineRegister.EX_MEM_Register.Store_data = state.EX.Read_data2;
+                if(pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs1 || 
+                   pipelineRegister.ID_EX_Register.Rd == pipelineRegister.IF_ID_Register.Rs2){
+                    state.ID.nop = true;
+                    state.IF.PC = pipelineRegister.IF_ID_Register.PC;
+                }
             }
             pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
             pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
 
-//            state.EX.nop = state.ID.nop;
-//            pipelineRegister.EX_MEM_Register.nop = state.EX.nop;
-        } else {
-        }
-        state.EX.nop = state.ID.nop;
-        pipelineRegister.EX_MEM_Register.nop = state.EX.nop;
-//        // halt
-//        if (haltCycle != -1 && cycle == haltCycle + 3) {
-//            state.EX.nop = true;
-//            pipelineRegister.ID_EX_Register.nop = true;
-//        }
 
 
-        /* --------------------- EX/MEM --------------------- */
-        // TODO 将流水线寄存器的值存储到MEM中
-        if (!pipelineRegister.EX_MEM_Register.nop) {
+            // TODO 将流水线寄存器的值存储到MEM中
             state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
             state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
             state.MEM.rd_mem = pipelineRegister.EX_MEM_Register.rd_mem;
@@ -632,6 +586,9 @@ int main()
             state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
             state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
         }
+
+
+
 
 
         /* --------------------- ID stage --------------------- */
@@ -741,9 +698,20 @@ int main()
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 pipelineRegister.ID_EX_Register.is_J_type = true;
             }
+            
             // TODO Read_data
             pipelineRegister.ID_EX_Register.Read_data1 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs1);
             pipelineRegister.ID_EX_Register.Read_data2 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs2);
+            
+            // TODO 判断两个分支指令是否发生跳转
+            if (pipelineRegister.ID_EX_Register.is_Branch && pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2) {
+                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + state.EX.Imm.to_ulong());
+            }
+
+            if (pipelineRegister.ID_EX_Register.is_J_type) {
+                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + state.EX.Imm.to_ulong());
+            }
+
 
             // TODO 将流水线寄存器的值存储到EX中
             state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
@@ -757,78 +725,29 @@ int main()
             state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
             state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
-
-//            state.ID.nop = state.IF.nop;
-//            pipelineRegister.ID_EX_Register.nop = state.ID.nop;
-        } else {
-            // state.ID.nop = state.IF.nop;
         }
-        state.ID.nop = state.IF.nop;
-        pipelineRegister.ID_EX_Register.nop = state.ID.nop;
-//        // halt
-//        if (haltCycle != -1 && cycle == haltCycle + 2) {
-//            state.ID.nop = true;
-//            pipelineRegister.IF_ID_Register.nop = true;
-//        }
-        pipelineRegister.ID_EX_Register.nop = state.ID.nop;
 
 
 
-        /* --------------------- ID/EX --------------------- */
-        // TODO 判断两个分支指令是否发生跳转
-        if (!pipelineRegister.ID_EX_Register.nop) {
-
-            if (pipelineRegister.ID_EX_Register.is_Branch && pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2) {
-                state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + state.EX.Imm.to_ulong());
-            }
-            if (pipelineRegister.ID_EX_Register.is_J_type) {
-                state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + state.EX.Imm.to_ulong());
-            }
-        }
 
 
         /* --------------------- IF stage --------------------- */
         if (!state.IF.nop) {
             // 取指
-            state.ID.Instr = myInsMem.readInstr(state.IF.PC);
             // 存入IF/ID寄存器
-            pipelineRegister.IF_ID_Register.Instr = state.ID.Instr;
-            if (isHalt(state.ID.Instr)) {
+            pipelineRegister.IF_ID_Register.Instr = myInsMem.readInstr(state.IF.PC);
+            pipelineRegister.IF_ID_Register.PC = state.IF.PC;
+            if (isHalt(pipelineRegister.IF_ID_Register.Instr)) {
                 haltCycle = cycle;
-            } else {
-                state.IF.nop = false;
-                pipelineRegister.IF_ID_Register.nop = false;
             }
-
-//            // halt
-//            if (haltCycle != -1 && cycle == haltCycle + 1) {
-//                state.IF.nop = true;
-//                // pipelineRegister.IF_ID_Register.nop = true;
-//            }
 
             pipelineRegister.IF_ID_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
             pipelineRegister.IF_ID_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
-        }
 
-        /* --------------------- IF/ID --------------------- */
-        // TODO 更新PC
-        if (!pipelineRegister.IF_ID_Register.nop) {
+            // TODO 更新PC
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
-
-        /* --------------------- Stall unit--------------------- */
-//        if (forwardingUnit.hasLoadUseHazard(pipelineRegister)) {
-//            // stall
-//            state.ID.nop = true;
-//            state.EX.nop = true;
-//            state.MEM.nop = true;
-//            state.WB.nop = true;
-//            pipelineRegister.ID_EX_Register.nop = true;
-//            pipelineRegister.EX_MEM_Register.nop = true;
-//            pipelineRegister.EX_MEM_Register.nop = true;
-//            pipelineRegister.MEM_WB_Register.nop = true;
-//        }
 
 
 
