@@ -689,6 +689,8 @@ int main()
 
             state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
             state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
+            state.WB.Rs = state.MEM.Rs;
+            state.WB.Rt = state.MEM.Rt;
             state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
 
             // 写回目的寄存器
@@ -703,10 +705,12 @@ int main()
         {
             state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
             state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
+            state.MEM.Rs = state.EX.Rs;
+            state.MEM.Rt = state.EX.Rt;
+            state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
             state.MEM.rd_mem = pipelineRegister.EX_MEM_Register.rd_mem;
             state.MEM.wrt_mem = pipelineRegister.EX_MEM_Register.wrt_mem;
             state.MEM.wrt_enable = pipelineRegister.EX_MEM_Register.wrt_enable;
-            state.MEM.Wrt_reg_addr = pipelineRegister.EX_MEM_Register.Rd;
 
             pipelineRegister.MEM_WB_Register.clear();
 
@@ -746,12 +750,15 @@ int main()
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
 
             pipelineRegister.EX_MEM_Register.clear();
-            pipelineRegister.EX_MEM_Register.ALUresult = bitset<64>(0);
+
+            pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
+            pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
 
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
             if (forwardingUnit.hasHazardForA())
             {
+                cout << "has hazard A" << endl;
                 operandA = forwardingUnit.getOperandA(pipelineRegister);
             }
             else
@@ -770,6 +777,7 @@ int main()
 
             if (forwardingUnit.hasHazardForB())
             {
+                cout << "has hazard B" << endl;
                 operandB = forwardingUnit.getOperandB(pipelineRegister);
             }
             else
@@ -813,8 +821,7 @@ int main()
                     state.IF.PC = pipelineRegister.IF_ID_Register.PC;
                 }
             }
-            pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
-            pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
+
 
             // TODO 将流水线寄存器的值存储到MEM中
             // state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
