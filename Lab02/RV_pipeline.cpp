@@ -639,7 +639,7 @@ int main() {
                 cout << "sd" << endl;
                 // sd
                 pipelineRegister.EX_MEM_Register.wrt_mem = true;
-                pipelineRegister.EX_MEM_Register.Store_data = state.EX.Read_data2;
+                pipelineRegister.EX_MEM_Register.Store_data = operandB;
                 if (hazardUnit.hazardDetect(pipelineRegister)) {
                     cout << "sd hazard" << endl;
                     state.ID.nop = true;
