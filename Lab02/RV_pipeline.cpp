@@ -357,8 +357,6 @@ void printState(stateStruct state, int cycle) {
         printstate << "WB.Wrt_reg_addr:\t" << state.WB.Wrt_reg_addr << endl;
         printstate << "WB.wrt_enable:\t" << state.WB.wrt_enable << endl;
         printstate << "WB.nop:\t" << state.WB.nop << endl;
-
-        printstate << "===============================================" << endl;
     } else
         cout << "Unable to open file";
     printstate.close();
@@ -422,6 +420,8 @@ public:
             cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
             cout << "Forward A : " << ForwardA << endl;
         }
+
+        
         if (pipelineRegister.EX_MEM_Register.wrt_enable &&
             (pipelineRegister.EX_MEM_Register.Rd != bitset<5>("00000")) &&
             (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs2)) {
@@ -561,14 +561,11 @@ int main() {
         state.EX.nop = state.ID.nop || cycle < 2;
         state.ID.nop = state.IF.nop || cycle < 1;
         state.IF.nop = halt;
-        if(cycle > 0){
+        if(cycle > 0 && !halt){
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
         cout << cycle << endl;
-
-        // cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
-        // cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.ID_EX_Register.Rs2 << endl;
 
         /* --------------------- WB stage --------------------- */
         if (!state.WB.nop) {
@@ -581,8 +578,8 @@ int main() {
             // 写回目的寄存器
             if (state.WB.wrt_enable) {
                 myRF.writeRF(state.WB.Wrt_reg_addr, state.WB.Wrt_data);
-                cout << "Target Register : " << state.WB.Wrt_reg_addr.to_ulong() << endl;
-                cout << "Data : " << state.WB.Wrt_data.to_ulong() << endl;
+                cout << "Target Register : " << state.WB.Wrt_reg_addr.to_ullong() << endl;
+                cout << "Data : " << state.WB.Wrt_data.to_ullong() << endl;
             }
         }
 
@@ -636,11 +633,14 @@ int main() {
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
 
             pipelineRegister.EX_MEM_Register.clear();
+            
             state.EX.Read_data1 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs1);
             state.EX.Read_data2 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs2);
-
+            
 
             bitset<64> operandA, operandB;
+            // cout << "Rd" << pipelineRegister.MEM_WB_Register.Wrt_reg_addr << endl;
+            // cout << "Rs1" << pipelineRegister.ID_EX_Register.Rs1 << endl;
             forwardingUnit.detectHazard(pipelineRegister);
             if (forwardingUnit.hasHazardForA()) {
                 cout << "has hazard A" << endl;
@@ -662,7 +662,8 @@ int main() {
             } else {
                 if (state.EX.is_I_type || state.EX.wrt_mem) {
                     // I-type 或 sd
-                    operandB = state.EX.Imm;
+                    operandB = myRF.readRF(state.EX.Rt);
+                    // cout << "LDSD opb : " << operandB << endl;
                 } else {
                     // R-type
                     operandB = state.EX.Read_data2;
@@ -691,13 +692,18 @@ int main() {
                 }
             }
 
-            if (state.EX.wrt_mem || state.EX.rd_mem) {
-                // operandA = state.EX.Read_data1;
-                operandB = state.EX.Imm;
+            if (state.EX.is_I_type || state.EX.wrt_mem) {
+                pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, state.EX.Imm);
+                // if(state.EX.wrt_mem){
+                //     cout << "opA : " << operandA << endl;
+                //     cout << "ALUr : " << pipelineRegister.EX_MEM_Register.ALUresult << endl;
+                // }
+            }else{
+                pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
             }
-            // cout << "operandA : " << operandA << endl;
-            // cout << "operandB : " << operandB << endl;
-            pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
+
+
+            // pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
             // cout << "pipelineRegister.EX_MEM_Register.ALUresult : " << pipelineRegister.EX_MEM_Register.ALUresult << endl;
             pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
             pipelineRegister.EX_MEM_Register.Rs1 = state.EX.Rs;
@@ -762,14 +768,16 @@ int main() {
                 pipelineRegister.ID_EX_Register.Imm = generateImm<12>(getBits<12>(state.ID.Instr, 20, 31));
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 funct3 = getBits<3>(state.ID.Instr, 12, 14);
-                cout << "ID op "
-                        << "ADDI" << endl;
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
                 if (funct3 == bitset<3>("011")) {
                     // ld
                     cout << "ID op "
                             << "LD" << endl;
+                    cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
                     pipelineRegister.ID_EX_Register.rd_mem = true;
+                }else{
+                    cout << "ID op "
+                        << "ADDI" << endl;
                 }
             } else if (opcode == bitset<7>("0100011")) {
                 // S-type
@@ -821,7 +829,7 @@ int main() {
                 pipelineRegister.ID_EX_Register.wrt_enable = false;
                 // TODO 在ID阶段就做分支跳转的判断
                 pipelineRegister.ID_EX_Register.is_Branch = true;
-            } else {
+            } else if (opcode == bitset<7>("1101111")){
                 // UJ-type
                 // jal
                 // TODO 在ID阶段就做分支跳转的判断
@@ -845,6 +853,9 @@ int main() {
                 // cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 pipelineRegister.ID_EX_Register.is_J_type = true;
+            }else{
+                // halt
+                pipelineRegister.ID_EX_Register.clear();
             }
 
             // TODO Read_data
@@ -890,13 +901,15 @@ int main() {
             pipelineRegister.IF_ID_Register.Rs2 = getBits<5>(state.ID.Instr, 20, 24);
 
             // 判断是不是最后的指令
-            halt = isHalt(pipelineRegister.IF_ID_Register.Instr);
+            if(isHalt(pipelineRegister.IF_ID_Register.Instr)){
+                halt = true;
+            }
 
             // TODO 更新PC
         }
 
         /* --------------------- Leave stage --------------------- */
-        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 70){
+        if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop){
             break;
         }
 
