@@ -82,20 +82,20 @@ struct EXStruct {
     bool wrt_enable = false;  // 是否写寄存器
     bool nop;
 
-    void clear() {
-        this->Read_data1 = bitset<64>(0);
-        bitset<64> Read_data2;
-        bitset<64> Imm;
-        bitset<5> Rs;
-        bitset<5> Rt;
-        bitset<5> Wrt_reg_addr;
-        bool is_I_type = false;
-        bool rd_mem = false;      // 是否读内存
-        bool wrt_mem = false;     // 是否写内存
-        unsigned long alu_op;     // 1 for addu, lw, sw, 0 for subu
-        bool wrt_enable = false;  // 是否写寄存器
-        bool nop;
-    }
+    // void clear() {
+    //     this->Read_data1 = bitset<64>(0);
+    //     bitset<64> Read_data2;
+    //     bitset<64> Imm;
+    //     bitset<5> Rs;
+    //     bitset<5> Rt;
+    //     bitset<5> Wrt_reg_addr;
+    //     bool is_I_type = false;
+    //     bool rd_mem = false;      // 是否读内存
+    //     bool wrt_mem = false;     // 是否写内存
+    //     unsigned long alu_op;     // 1 for addu, lw, sw, 0 for subu
+    //     bool wrt_enable = false;  // 是否写寄存器
+    //     bool nop;
+    // }
 };
 
 struct EX_MEM {
@@ -303,6 +303,18 @@ public:
             cout << "Unable to open file";
         dmemout.close();
     }
+    
+    void testDataMem(bitset<32> addr){
+        cout << "Data : ";
+        cout << DMem[addr.to_ulong()];
+        cout << DMem[addr.to_ulong() + 1];
+        cout << DMem[addr.to_ulong() + 2];
+        cout << DMem[addr.to_ulong() + 3];
+        cout << DMem[addr.to_ulong() + 4];
+        cout << DMem[addr.to_ulong() + 5];
+        cout << DMem[addr.to_ulong() + 6];
+        cout << DMem[addr.to_ulong() + 7] << endl;
+    }
 
 private:
     vector<bitset<8>> DMem;
@@ -411,7 +423,7 @@ public:
             (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs1)) {
             ForwardA = bitset<2>("10");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.EX_MEM_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
             cout << "Forward A : " << ForwardA << endl;
         }
         if (pipelineRegister.EX_MEM_Register.wrt_enable &&
@@ -419,7 +431,7 @@ public:
             (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs2)) {
             ForwardB = bitset<2>("10");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.EX_MEM_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
             cout << "Forward B : " << ForwardB << endl;
         }
 
@@ -430,7 +442,7 @@ public:
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr == pipelineRegister.ID_EX_Register.Rs1)) {
             ForwardA = bitset<2>("01");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.EX_MEM_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
             cout << "Forward A : " << ForwardA << endl;
         }
         if (pipelineRegister.MEM_WB_Register.wrt_enable &&
@@ -439,7 +451,7 @@ public:
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr == pipelineRegister.ID_EX_Register.Rs2)) {
             ForwardB = bitset<2>("01");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.EX_MEM_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
             cout << "Forward B : " << ForwardB << endl;
         }
     }
@@ -586,27 +598,24 @@ int main() {
             if (state.MEM.rd_mem) {
                 // ld
                 pipelineRegister.MEM_WB_Register.Wrt_data = myDataMem.readDataMem(getAddress(state.MEM.ALUresult));
+                cout << "ld Addr : " << getAddress(state.MEM.ALUresult) << endl;
+                myDataMem.testDataMem(getAddress(state.MEM.ALUresult));
             }
             if (state.MEM.wrt_mem) {
                 // sd
                 myDataMem.writeDataMem(getAddress(state.MEM.ALUresult), state.MEM.Store_data);
                 // cout << "Already sd to : " << getAddress(state.MEM.ALUresult) << "|||" << state.MEM.Store_data << endl;
+                cout << "sd Addr : " << getAddress(state.MEM.ALUresult) << endl;
+                myDataMem.testDataMem(getAddress(state.MEM.ALUresult));
             }
             pipelineRegister.MEM_WB_Register.wrt_enable = state.MEM.wrt_enable;
             pipelineRegister.MEM_WB_Register.Wrt_reg_addr = state.MEM.Wrt_reg_addr;
-
-            // TODO 将流水线寄存器的值存储到WB中
-            // state.WB.wrt_enable = pipelineRegister.MEM_WB_Register.wrt_enable;
-            // state.WB.Wrt_data = pipelineRegister.MEM_WB_Register.Wrt_data;
-            // state.WB.Wrt_reg_addr = pipelineRegister.MEM_WB_Register.Wrt_reg_addr;
         }
 
         /* --------------------- EX stage --------------------- */
         if (!state.EX.nop) {
             state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
             state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
-            // cout << "state.EX.Rs : " << state.EX.Rs << endl;
-            // cout << "state.EX.Rt : " << state.EX.Rt << endl;
             state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
             state.EX.Read_data1 = pipelineRegister.ID_EX_Register.Read_data1;
             state.EX.Read_data2 = pipelineRegister.ID_EX_Register.Read_data2;
@@ -620,13 +629,9 @@ int main() {
             pipelineRegister.EX_MEM_Register.clear();
 
             pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
-            // test
             pipelineRegister.EX_MEM_Register.Rs1 = state.EX.Rs;
             pipelineRegister.EX_MEM_Register.Rs2 = state.EX.Rt;
-            // cout << "pipelineRegister.EX_MEM_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
-            // cout << "pipelineRegister.EX_MEM_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
             pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
-            // cout << state.EX.wrt_mem << endl;
 
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
@@ -693,8 +698,8 @@ int main() {
             state.ID.Instr = pipelineRegister.IF_ID_Register.Instr;
             // 根据指令判断指令类型以及ALUOP
             bitset<7> opcode = getBits<7>(state.ID.Instr, 0, 6);
-            bitset<3> funct3;
-            bitset<7> funct7;
+            bitset<3> funct3 = bitset<3>(0);
+            bitset<7> funct7 = bitset<7>(0);
 
             if (opcode == bitset<7>("0110011")) {
                 // R-type
@@ -709,20 +714,34 @@ int main() {
                 funct7 = getBits<7>(state.ID.Instr, 25, 31);
                 if (funct3 == bitset<3>("000")) {
                     if (funct7 == bitset<7>("0000000")) {
-                        // add
+                        cout << "ID op "
+                             << "ADD" << endl;
                         pipelineRegister.ID_EX_Register.ALUop = ADD;
                     } else {
                         // sub
+                        cout << "ID op "
+                             << "SUB" << endl;
+                        cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
+                        cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.ID_EX_Register.Rs2 << endl;
+                        cout << "pipelineRegister.ID_EX_Register.Rd : " << pipelineRegister.ID_EX_Register.Rd << endl;
+                        cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << myRF.readRF(pipelineRegister.ID_EX_Register.Rs1) << endl;
+                        cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << myRF.readRF(pipelineRegister.ID_EX_Register.Rs2) << endl;
                         pipelineRegister.ID_EX_Register.ALUop = SUB;
                     }
                 } else if (funct3 == bitset<3>("111")) {
                     // and
+                    cout << "ID op "
+                            << "AND" << endl;
                     pipelineRegister.ID_EX_Register.ALUop = AND;
                 } else if (funct3 == bitset<3>("110")) {
                     // or
+                    cout << "ID op "
+                            << "OR" << endl;
                     pipelineRegister.ID_EX_Register.ALUop = OR;
                 } else {
                     // xor
+                    cout << "ID op "
+                            << "XOR" << endl;
                     pipelineRegister.ID_EX_Register.ALUop = XOR;
                 }
             } else if (opcode == bitset<7>("0010011") || opcode == bitset<7>("0000011")) {
@@ -733,9 +752,13 @@ int main() {
                 pipelineRegister.ID_EX_Register.Imm = generateImm<12>(getBits<12>(state.ID.Instr, 20, 31));
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 funct3 = getBits<3>(state.ID.Instr, 12, 14);
+                cout << "ID op "
+                        << "ADDI" << endl;
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
                 if (funct3 == bitset<3>("011")) {
                     // ld
+                    cout << "ID op "
+                            << "LD" << endl;
                     pipelineRegister.ID_EX_Register.rd_mem = true;
                 }
             } else if (opcode == bitset<7>("0100011")) {
@@ -748,6 +771,8 @@ int main() {
                 bitset<5> imm1 = getBits<5>(state.ID.Instr, 7, 11);
                 bitset<7> imm2 = getBits<7>(state.ID.Instr, 25, 31);
                 bitset<12> imm;
+                cout << "ID op "
+                        << "SD" << endl;
                 for (int i = 0; i <= 4; ++i) {
                     imm[i] = imm1[i];
                 }
@@ -768,6 +793,8 @@ int main() {
                 bitset<4> imm1 = getBits<4>(state.ID.Instr, 8, 11);
                 bitset<6> imm2 = getBits<6>(state.ID.Instr, 25, 30);
                 bitset<13> imm;
+                cout << "ID op "
+                        << "BEQ" << endl;
                 imm[0] = false;  // SB-type最低位一定是0，保证是偶数
                 for (int i = 1; i <= 4; ++i) {
                     imm[i] = imm1[i - 1];
@@ -792,6 +819,8 @@ int main() {
                 bitset<10> imm1 = getBits<10>(state.ID.Instr, 21, 30);
                 bitset<8> imm2 = getBits<8>(state.ID.Instr, 12, 19);
                 bitset<21> imm;
+                cout << "ID op "
+                        << "JAL" << endl;
                 imm[0] = false;  // UJ-type最低位一定是0，保证是偶数
                 for (int i = 1; i <= 10; ++i) {
                     imm[i] = imm1[i - 1];
@@ -813,14 +842,21 @@ int main() {
             pipelineRegister.ID_EX_Register.Read_data2 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs2);
 
             // TODO 判断两个分支指令是否发生跳转
-            if (pipelineRegister.ID_EX_Register.is_Branch && pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2){
-                // cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << pipelineRegister.ID_EX_Register.Read_data1 << endl;
-                // cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << pipelineRegister.ID_EX_Register.Read_data2 << endl;
-                // cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
-                // cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
-                state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + pipelineRegister.ID_EX_Register.Imm.to_ulong());
-                cout << "jump to " << state.IF.PC.to_ulong() << endl;
+            if (pipelineRegister.ID_EX_Register.is_Branch){
+                if(pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2){
+                    // cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << pipelineRegister.ID_EX_Register.Read_data1 << endl;
+                    // cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << pipelineRegister.ID_EX_Register.Read_data2 << endl;
+                    // cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
+                    // cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
+                    state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + pipelineRegister.ID_EX_Register.Imm.to_ulong());
+                    cout << "branch to " << state.IF.PC.to_ulong() << endl;
+                }else{
+                    cout << "branch fail" << endl;
+                }
                 pipelineRegister.ID_EX_Register.clear();
+                cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
+                // cout << state.
+                state.ID.Instr = bitset<32>(0);
             }
 
             if (pipelineRegister.ID_EX_Register.is_J_type) {
@@ -828,20 +864,9 @@ int main() {
                 // cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
                 state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ullong() + pipelineRegister.ID_EX_Register.Imm.to_ullong());
                 cout << "jump to " << state.IF.PC.to_ulong() << endl;
+                pipelineRegister.ID_EX_Register.clear();
+                state.ID.Instr = bitset<32>(0);
             }
-
-            // TODO 将流水线寄存器的值存储到EX中
-            // state.EX.Rs = pipelineRegister.ID_EX_Register.Rs1;
-            // state.EX.Rt = pipelineRegister.ID_EX_Register.Rs2;
-            // state.EX.Wrt_reg_addr = pipelineRegister.ID_EX_Register.Rd;
-            // state.EX.Read_data1 = pipelineRegister.ID_EX_Register.Read_data1;
-            // state.EX.Read_data2 = pipelineRegister.ID_EX_Register.Read_data2;
-            // state.EX.Imm = pipelineRegister.ID_EX_Register.Imm;
-            // state.EX.wrt_enable = pipelineRegister.ID_EX_Register.wrt_enable;
-            // state.EX.alu_op = pipelineRegister.ID_EX_Register.ALUop;
-            // state.EX.rd_mem = pipelineRegister.ID_EX_Register.rd_mem;
-            // state.EX.wrt_mem = pipelineRegister.ID_EX_Register.wrt_mem;
-            // state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
         }
 
         /* --------------------- IF stage --------------------- */
@@ -860,7 +885,8 @@ int main() {
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
-        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 100){
+        /* --------------------- Leave stage --------------------- */
+        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 40){
             break;
         }
 
