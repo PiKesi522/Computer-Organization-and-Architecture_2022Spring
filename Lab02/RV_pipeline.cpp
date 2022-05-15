@@ -185,6 +185,10 @@ public:
         Registers[0] = bitset<64>(0);
     }
 
+    void jieDi(){
+        this->Registers[0] = bitset<64>("0");
+    }
+
     bitset<64> readRF(bitset<5> Reg_addr) {
         Reg_data = Registers[Reg_addr.to_ulong()];
         return Reg_data;
@@ -775,7 +779,7 @@ int main() {
                 imm[12] = state.ID.Instr[31];
                 cout << "beq imm : " << imm << endl;
                 pipelineRegister.ID_EX_Register.Imm = generateImm<13>(imm);
-                cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
                 pipelineRegister.ID_EX_Register.ALUop = ADD;
                 pipelineRegister.ID_EX_Register.wrt_enable = false;
                 // TODO 在ID阶段就做分支跳转的判断
@@ -799,7 +803,7 @@ int main() {
                 imm[20] = state.ID.Instr[31];
                 cout << "jal imm : " << imm << endl;
                 pipelineRegister.ID_EX_Register.Imm = generateImm<21>(imm);
-                cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Imm : " << pipelineRegister.ID_EX_Register.Imm << endl;
                 pipelineRegister.ID_EX_Register.wrt_enable = true;
                 pipelineRegister.ID_EX_Register.is_J_type = true;
             }
@@ -810,17 +814,18 @@ int main() {
 
             // TODO 判断两个分支指令是否发生跳转
             if (pipelineRegister.ID_EX_Register.is_Branch && pipelineRegister.ID_EX_Register.Read_data1 != pipelineRegister.ID_EX_Register.Read_data2){
-                cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << pipelineRegister.ID_EX_Register.Read_data1 << endl;
-                cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << pipelineRegister.ID_EX_Register.Read_data2 << endl;
-                cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
-                cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << pipelineRegister.ID_EX_Register.Read_data1 << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << pipelineRegister.ID_EX_Register.Read_data2 << endl;
+                // cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
                 state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ulong() + pipelineRegister.ID_EX_Register.Imm.to_ulong());
                 cout << "jump to " << state.IF.PC.to_ulong() << endl;
+                pipelineRegister.ID_EX_Register.clear();
             }
 
             if (pipelineRegister.ID_EX_Register.is_J_type) {
-                cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
-                cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
+                // cout << "pipelineRegister.IF_ID_Register.PC.to_ulong() : " << pipelineRegister.IF_ID_Register.PC.to_ullong() << endl;
+                // cout << "pipelineRegister.ID_EX_Register.Imm.to_ulong() : " << pipelineRegister.ID_EX_Register.Imm.to_ullong() << endl;
                 state.IF.PC = bitset<32>(pipelineRegister.IF_ID_Register.PC.to_ullong() + pipelineRegister.ID_EX_Register.Imm.to_ullong());
                 cout << "jump to " << state.IF.PC.to_ulong() << endl;
             }
@@ -855,10 +860,12 @@ int main() {
             state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
-        if (state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop || cycle == 100)
+        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 100){
             break;
+        }
 
         printState(state, cycle);
+        myRF.jieDi();
         // printState(newState, cycle); //print states after executing cycle 0, cycle 1, cycle 2 ...
         cout << "==========================================" << endl;
         cycle += 1;
