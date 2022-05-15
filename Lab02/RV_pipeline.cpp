@@ -112,8 +112,6 @@ struct EX_MEM {
     void clear() {
         this->ALUresult = bitset<64>(0);
         this->Store_data = bitset<64>(0);
-        this->Rs1 = bitset<5>(0);
-        this->Rs2 = bitset<5>(0);
         this->Rd = bitset<5>(0);
         this->doBranch = false;  // 比较结果不同（bne），需要跳转
         this->rd_mem = false;
@@ -143,8 +141,6 @@ struct MEM_WB {
 
     void clear() {
         this->Wrt_data = bitset<64>(0);
-        this->Rs = bitset<5>(0);
-        this->Rt = bitset<5>(0);
         this->Wrt_reg_addr = bitset<5>(0);
         this->wrt_enable = false;
     }
@@ -423,7 +419,7 @@ public:
             (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs1)) {
             ForwardA = bitset<2>("10");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
             cout << "Forward A : " << ForwardA << endl;
         }
         if (pipelineRegister.EX_MEM_Register.wrt_enable &&
@@ -431,27 +427,31 @@ public:
             (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs2)) {
             ForwardB = bitset<2>("10");
             cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.ID_EX_Register.Rs2 << endl;
             cout << "Forward B : " << ForwardB << endl;
         }
 
         // MEM 冒险
         if (pipelineRegister.MEM_WB_Register.wrt_enable &&
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr != bitset<5>("00000")) &&
-            !(pipelineRegister.EX_MEM_Register.wrt_enable && (pipelineRegister.EX_MEM_Register.Rd != bitset<5>("00000")) && (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs1)) &&
+               !(pipelineRegister.EX_MEM_Register.wrt_enable && 
+                (pipelineRegister.EX_MEM_Register.Rd != bitset<5>("00000")) && 
+                (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs1)) &&
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr == pipelineRegister.ID_EX_Register.Rs1)) {
             ForwardA = bitset<2>("01");
-            cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.EX_MEM_Register.Rs1 << endl;
+            cout << "pipelineRegister.MEM_WB_Register.Wrt_reg_addr : " << pipelineRegister.MEM_WB_Register.Wrt_reg_addr << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
             cout << "Forward A : " << ForwardA << endl;
         }
         if (pipelineRegister.MEM_WB_Register.wrt_enable &&
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr != bitset<5>("00000")) &&
-            !(pipelineRegister.EX_MEM_Register.wrt_enable && (pipelineRegister.EX_MEM_Register.Rd != bitset<5>("00000")) && (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs2)) &&
+               !(pipelineRegister.EX_MEM_Register.wrt_enable && 
+                (pipelineRegister.EX_MEM_Register.Rd != bitset<5>("00000")) && 
+                (pipelineRegister.EX_MEM_Register.Rd == pipelineRegister.ID_EX_Register.Rs2)) &&
             (pipelineRegister.MEM_WB_Register.Wrt_reg_addr == pipelineRegister.ID_EX_Register.Rs2)) {
             ForwardB = bitset<2>("01");
-            cout << "pipelineRegister.EX_MEM_Register.Rd : " << pipelineRegister.EX_MEM_Register.Rd << endl;
-            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.EX_MEM_Register.Rs2 << endl;
+            cout << "pipelineRegister.MEM_WB_Register.Wrt_reg_addr : " << pipelineRegister.MEM_WB_Register.Wrt_reg_addr << endl;
+            cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.ID_EX_Register.Rs2 << endl;
             cout << "Forward B : " << ForwardB << endl;
         }
     }
@@ -473,6 +473,7 @@ public:
             return pipelineRegister.MEM_WB_Register.Wrt_data;
         }
     }
+
 
     bitset<64> getOperandB(PipelineRegister pipelineRegister) {
         // 此时已发生冒险
@@ -560,7 +561,9 @@ int main() {
         state.EX.nop = state.ID.nop || cycle < 2;
         state.ID.nop = state.IF.nop || cycle < 1;
         state.IF.nop = halt;
-    
+        if(cycle > 0){
+            state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
+        }
 
         cout << cycle << endl;
 
@@ -578,12 +581,15 @@ int main() {
             // 写回目的寄存器
             if (state.WB.wrt_enable) {
                 myRF.writeRF(state.WB.Wrt_reg_addr, state.WB.Wrt_data);
+                cout << "Target Register : " << state.WB.Wrt_reg_addr.to_ulong() << endl;
+                cout << "Data : " << state.WB.Wrt_data.to_ulong() << endl;
             }
         }
 
         /* --------------------- MEM stage --------------------- */
         if (!state.MEM.nop) {
             state.MEM.ALUresult = pipelineRegister.EX_MEM_Register.ALUresult;
+            // cout << "pipelineRegister.EX_MEM_Register.ALUresult : " << pipelineRegister.EX_MEM_Register.ALUresult << endl;
             state.MEM.Store_data = pipelineRegister.EX_MEM_Register.Store_data;
             state.MEM.Rs = pipelineRegister.EX_MEM_Register.Rs1;
             state.MEM.Rt = pipelineRegister.EX_MEM_Register.Rs2;
@@ -594,7 +600,10 @@ int main() {
 
             pipelineRegister.MEM_WB_Register.clear();
 
+            pipelineRegister.MEM_WB_Register.Rs = state.MEM.Rs;
+            pipelineRegister.MEM_WB_Register.Rt = state.MEM.Rt;
             pipelineRegister.MEM_WB_Register.Wrt_data = state.MEM.ALUresult;
+            // cout << "pipelineRegister.MEM_WB_Register.Wrt_data : " << pipelineRegister.MEM_WB_Register.Wrt_data << endl;
             if (state.MEM.rd_mem) {
                 // ld
                 pipelineRegister.MEM_WB_Register.Wrt_data = myDataMem.readDataMem(getAddress(state.MEM.ALUresult));
@@ -627,11 +636,9 @@ int main() {
             state.EX.is_I_type = pipelineRegister.ID_EX_Register.is_I_type;
 
             pipelineRegister.EX_MEM_Register.clear();
+            state.EX.Read_data1 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs1);
+            state.EX.Read_data2 = myRF.readRF(pipelineRegister.ID_EX_Register.Rs2);
 
-            pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
-            pipelineRegister.EX_MEM_Register.Rs1 = state.EX.Rs;
-            pipelineRegister.EX_MEM_Register.Rs2 = state.EX.Rt;
-            pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
 
             bitset<64> operandA, operandB;
             forwardingUnit.detectHazard(pipelineRegister);
@@ -661,7 +668,7 @@ int main() {
                     operandB = state.EX.Read_data2;
                 }
             }
-
+            
             if (state.EX.rd_mem) {
                 cout << "ld" << endl;
                 // ld
@@ -688,7 +695,15 @@ int main() {
                 // operandA = state.EX.Read_data1;
                 operandB = state.EX.Imm;
             }
+            // cout << "operandA : " << operandA << endl;
+            // cout << "operandB : " << operandB << endl;
             pipelineRegister.EX_MEM_Register.ALUresult = alu.ALUOperation(state.EX.alu_op, operandA, operandB);
+            // cout << "pipelineRegister.EX_MEM_Register.ALUresult : " << pipelineRegister.EX_MEM_Register.ALUresult << endl;
+            pipelineRegister.EX_MEM_Register.wrt_enable = state.EX.wrt_enable;
+            pipelineRegister.EX_MEM_Register.Rs1 = state.EX.Rs;
+            pipelineRegister.EX_MEM_Register.Rs2 = state.EX.Rt;
+            pipelineRegister.EX_MEM_Register.Rd = state.EX.Wrt_reg_addr;
+            
         }
 
         /* --------------------- ID stage --------------------- */
@@ -721,11 +736,6 @@ int main() {
                         // sub
                         cout << "ID op "
                              << "SUB" << endl;
-                        cout << "pipelineRegister.ID_EX_Register.Rs1 : " << pipelineRegister.ID_EX_Register.Rs1 << endl;
-                        cout << "pipelineRegister.ID_EX_Register.Rs2 : " << pipelineRegister.ID_EX_Register.Rs2 << endl;
-                        cout << "pipelineRegister.ID_EX_Register.Rd : " << pipelineRegister.ID_EX_Register.Rd << endl;
-                        cout << "pipelineRegister.ID_EX_Register.Read_data1 : " << myRF.readRF(pipelineRegister.ID_EX_Register.Rs1) << endl;
-                        cout << "pipelineRegister.ID_EX_Register.Read_data2 : " << myRF.readRF(pipelineRegister.ID_EX_Register.Rs2) << endl;
                         pipelineRegister.ID_EX_Register.ALUop = SUB;
                     }
                 } else if (funct3 == bitset<3>("111")) {
@@ -873,6 +883,7 @@ int main() {
         if (!state.IF.nop) {
             // 取指
             // 存入IF/ID寄存器
+            cout << "PC : " << state.IF.PC << endl;
             pipelineRegister.IF_ID_Register.Instr = myInsMem.readInstr(state.IF.PC);
             pipelineRegister.IF_ID_Register.PC = state.IF.PC;
             pipelineRegister.IF_ID_Register.Rs1 = getBits<5>(state.ID.Instr, 15, 19);
@@ -882,11 +893,10 @@ int main() {
             halt = isHalt(pipelineRegister.IF_ID_Register.Instr);
 
             // TODO 更新PC
-            state.IF.PC = bitset<32>(state.IF.PC.to_ulong() + 4);
         }
 
         /* --------------------- Leave stage --------------------- */
-        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 40){
+        if ((state.IF.nop && state.ID.nop && state.EX.nop && state.MEM.nop && state.WB.nop) || cycle == 70){
             break;
         }
 
